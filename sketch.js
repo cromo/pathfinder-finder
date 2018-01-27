@@ -163,6 +163,8 @@ function removeEdgesLeavingSubgraph(nodes, edges) {
 function pruneToTree(goalNodeIndex, edges) {
   let branches = [];
   let reachedNodes = [goalNodeIndex];
+  let nodeDistancesToGoal = {};
+  nodeDistancesToGoal[goalNodeIndex] = 0;
 
   let previousNodeReachCount = reachedNodes.length;
   while (reachedNodes.length < nodes.length) {
@@ -173,12 +175,6 @@ function pruneToTree(goalNodeIndex, edges) {
     });
     // Multiple edges may originate from any given node, so group them, sort the edges by
     // distance, and keep only the shortest one.
-    // TODO: In the future, this should probably count the total distance to the goal by
-    //       walking the whole edge list back to the goal node instead of just the nearest
-    //       node, but this seems to do a decent job.
-    // TODO: Once the walking back to the origin is implemented, it may also be helpful to
-    //       consider the nodes that were found this iteration instead of only nodes found
-    //       in previous iterations. I'm not sure that makes much sense though...
     const enteringEdgesByStartNode = edgesEnteringSubgraph.reduce((memo, [start, end]) => {
       memo[start] = memo[start] || [];
       memo[start].push([start, end]);
@@ -186,7 +182,8 @@ function pruneToTree(goalNodeIndex, edges) {
     }, {});
     Object.values(enteringEdgesByStartNode).forEach(edgeList => {
       edgeList.sort((e1, e2) => {
-        return nodes[e1[0]].dist(nodes[e1[1]]) - nodes[e2[0]].dist(nodes[e2[1]]);
+        return (nodes[e1[0]].dist(nodes[e1[1]]) + nodeDistancesToGoal[e1[1]]) -
+          (nodes[e2[0]].dist(nodes[e2[1]]) + nodeDistancesToGoal[e2[1]]);
       });
     });
     const closestEdges = Object.values(enteringEdgesByStartNode).map(edgeList => {
