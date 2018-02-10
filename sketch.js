@@ -47,21 +47,17 @@ function setup() {
     } else if (toolSelector.value() == 'walls') {
       addWallPoint(mouseX, mouseY);
     }
+    redraw();
   });
   createInput('').input(function changeGoalNode() {
     const value = +this.value();
     if (this.value() && 0 <= value && value < nodes.length) {
       goalNode = value;
     }
+    redraw();
   });
 
-  // nodes.push(createVector(20, 20));
-  // nodes.push(createVector(200, 50));
-  // nodes.push(createVector(150, 300));
-
-  // completeDirectedGraph(nodes, edges);
-
-  // oneWayWalls.push([createVector(40, 100), createVector(300, 120)]);
+  noLoop();
 }
 
 function drawArrow(x0, y0, x1, y1) {
