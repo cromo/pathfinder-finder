@@ -185,13 +185,12 @@ function pruneToTree(goalNodeIndex, edges) {
     const closestEdges = Object.values(enteringEdgesByStartNode).map(edgeList => {
       return edgeList[0];
     });
-    // Then add the edges to our tree, and add the nodes they originate from to our subgraph.
-    branches = branches.concat(closestEdges);
-    closestEdges.forEach(([start,]) => {
-      if (!nodeIsIn(start, reachedNodes)) {
-        reachedNodes.push(start);
-      }
-    });
+    // Then add the first edge to our tree, and add the start node to our subgraph.
+    if (closestEdges.length) {
+      const newEdge = closestEdges[0];
+      branches.push(newEdge);
+      reachedNodes.push(newEdge[0]);
+    }
     if (previousNodeReachCount == reachedNodes.length) {
       break;
     }
