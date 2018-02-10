@@ -1,8 +1,9 @@
 const NODE_RADIUS = 20;
 
-const nodes = [];
-let edges = [];
-const oneWayWalls = [];  // Represents cliffs or similar geometry
+let initialState = null;
+
+let nodes = [];
+let oneWayWalls = [];  // Represents cliffs or similar geometry
 let goalNode = 0;
 
 function completeDirectedGraph(nodes, edges) {
@@ -17,19 +18,18 @@ function completeDirectedGraph(nodes, edges) {
 
 function addNode(x, y) {
   nodes.push(createVector(x, y));
-  edges = [];
-  completeDirectedGraph(nodes, edges);
 }
 
 let lastWallPoint = null;
 function addWallPoint(x, y) {
   if (lastWallPoint == null) {
     lastWallPoint = createVector(x, y);
-  } else {
-    const newWallPoint = createVector(x, y);
-    oneWayWalls.push([lastWallPoint, newWallPoint]);
-    lastWallPoint = newWallPoint;
+    return false;
   }
+  const newWallPoint = createVector(x, y);
+  oneWayWalls.push([lastWallPoint, newWallPoint]);
+  lastWallPoint = newWallPoint;
+  return true;
 }
 
 function setup() {
@@ -37,17 +37,22 @@ function setup() {
   const toolSelector = createRadio();
   toolSelector.option('nodes');
   toolSelector.option('walls');
-  toolSelector.value('walls');
+  toolSelector.value('nodes');
   createButton('new wall').mousePressed(() => {
     lastWallPoint = null;
   });
   canvas.mouseClicked(() => {
     if (toolSelector.value() == 'nodes') {
       addNode(mouseX, mouseY);
+      redraw();
+      saveState(goalNode, nodes, oneWayWalls);
     } else if (toolSelector.value() == 'walls') {
-      addWallPoint(mouseX, mouseY);
+      const wallAdded = addWallPoint(mouseX, mouseY);
+      if (wallAdded) {
+        redraw();
+        saveState(goalNode, nodes, oneWayWalls);
+      }
     }
-    redraw();
   });
   createInput('').input(function changeGoalNode() {
     const value = +this.value();
@@ -55,7 +60,14 @@ function setup() {
       goalNode = value;
     }
     redraw();
+    saveState(goalNode, nodes, oneWayWalls);
   });
+  window.onpopstate = event => loadState(event.state);
+
+  initialState = new URL(window.location).searchParams.get("s");
+  if (initialState) {
+    loadState(initialState);
+  }
 
   noLoop();
 }
@@ -201,10 +213,13 @@ function pruneToTree(goalNodeIndex, edges) {
 var reachabilityEdges;
 function draw() {
   background(240);
-  // const reachabilityEdges = edges.filter(isTraversible);
+
+  const edges = [];
+  completeDirectedGraph(nodes, edges);
   reachabilityEdges = edges.filter(isTraversible);
-  // reachabilityEdges.forEach(drawEdge);
   pruneToTree(goalNode, reachabilityEdges).forEach(drawEdge);
+
+  console.log("nodes:", nodes);
   nodes.forEach((node, i) => {
     fill(goalNode == i ? 0 : 255);
     ellipse(node.x, node.y, NODE_RADIUS, NODE_RADIUS);
@@ -212,4 +227,25 @@ function draw() {
   oneWayWalls.forEach(([start, end]) => {
     drawLineWithNormal(start, end);
   });
+}
+
+// Save enough information to recover the current state in the URL.
+function saveState(goal, nodes, walls) {
+  const nodeString = JSON.stringify({
+    goal: goal,
+    nodes: nodes.map(vec => [vec.x, vec.y]),
+    walls: walls.map(([start, end]) => [[start.x, start.y], [end.x, end.y]])
+  });
+  const compressedEncodedNodeString = LZString.compressToEncodedURIComponent(nodeString);
+  history.pushState(compressedEncodedNodeString, "", `?s=${compressedEncodedNodeString}`);
+}
+
+function loadState(encodedState) {
+  const state = encodedState || initialState ?
+    JSON.parse(LZString.decompressFromEncodedURIComponent(encodedState || initialState)) :
+    {goal: 0, nodes: [], walls: []};
+  goalNode = state.goal;
+  nodes = state.nodes.map(([x, y]) => createVector(x, y));
+  oneWayWalls = state.walls.map(([[x1, y1], [x2, y2]]) => [createVector(x1, y1), createVector(x2, y2)]);
+  redraw();
 }
