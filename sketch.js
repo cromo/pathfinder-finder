@@ -232,6 +232,7 @@ function pruneToTree(goalNodeIndex, edges) {
       const newEdge = closestEdges[0];
       branches.push(newEdge);
       reachedNodes.push(newEdge[0]);
+      nodeDistancesToGoal[newEdge[0]] = (nodes[newEdge[0]].dist(nodes[newEdge[1]]) + nodeDistancesToGoal[newEdge[1]]);
     }
     if (previousNodeReachCount == reachedNodes.length) {
       break;
